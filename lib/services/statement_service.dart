@@ -18,7 +18,7 @@ class StatementService {
           return pw.Directionality(
             textDirection: pw.TextDirection.rtl,
             child: pw.Column(
-              cross: pw.CrossAxisAlignment.start,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Header(level: 0, child: pw.Text('كشف حساب - ${customer.name}')),
                 pw.SizedBox(height: 10),
