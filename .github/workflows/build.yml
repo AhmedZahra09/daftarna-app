@@ -37,4 +37,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: daftarna-debug-apk
-          path: build/app/outputs/apk/debug/app-debug.apk
+          path: '**/app-debug.apk'
