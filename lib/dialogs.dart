@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'database.dart';
 import 'models.dart';
-import 'services/sms_parser.dart';
 import 'services/voice_parser.dart';
 import 'theme.dart';
 
@@ -164,61 +163,4 @@ Future<bool> showVoiceEntryDialog(BuildContext context) async {
     note: e.note,
   );
   return true;
-}
-
-Future<bool> showTransferDialog(BuildContext context, IncomingTransfer t) async {
-  final db = AppDatabase.instance;
-  Customer? target;
-  if ((t.sender ?? '').isNotEmpty) {
-    final m = await db.findCustomersByName(t.sender!);
-    if (m.isNotEmpty) target = m.first;
-  }
-  if (!context.mounted) return false;
-
-  target ??= await _pickCustomer(context);
-  if (target == null || !context.mounted) return false;
-
-  final chosen = target;
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (c) => AlertDialog(
-      title: const Text('تحويل وارد'),
-      content: Text(
-        'وصلك تحويل بمبلغ ${fmt(t.amount)}، هل تريد تسجيلها كعملية سداد لحساب ${chosen.name}؟',
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('لا')),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: kGreen),
-          onPressed: () => Navigator.pop(c, true),
-          child: const Text('نعم، سجّل'),
-        ),
-      ],
-    ),
-  );
-  if (ok != true) return false;
-  await db.addTransaction(
-    customerId: chosen.id,
-    amount: t.amount.round(),
-    type: TxType.got,
-    note: 'تحويل بنكي${t.sender == null ? '' : ' من ${t.sender}'}',
-  );
-  return true;
-}
-
-Future<Customer?> _pickCustomer(BuildContext context) async {
-  final all = await AppDatabase.instance.getCustomers();
-  if (!context.mounted) return null;
-  return showDialog<Customer>(
-    context: context,
-    builder: (c) => SimpleDialog(
-      title: const Text('لأي زبون هذا التحويل؟'),
-      children: [
-        for (final x in all)
-          SimpleDialogOption(onPressed: () => Navigator.pop(c, x), child: Text(x.name)),
-        if (all.isEmpty)
-          const Padding(padding: EdgeInsets.all(16), child: Text('لا يوجد زبائن بعد')),
-      ],
-    ),
-  );
 }
