@@ -1,0 +1,50 @@
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:share_plus/share_plus.dart';
+
+import '../models.dart';
+import '../theme.dart';
+
+class StatementService {
+  static Future<void> sharePdfStatement(Customer customer, List<LedgerTx> txs) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Directionality(
+            textDirection: pw.TextDirection.rtl,
+            child: pw.Column(
+              cross: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Header(level: 0, child: pw.Text('كشف حساب - ${customer.name}')),
+                pw.SizedBox(height: 10),
+                pw.Text('رقم الهاتف: ${customer.phone ?? "غير مسجل"}'),
+                pw.Text('الصافي الحالي: ${fmt(customer.balance.abs())} د.س'),
+                pw.SizedBox(height: 20),
+                pw.TableHelper.fromTextArray(
+                  headers: ['التاريخ', 'البيان', 'أعطيته (آجل)', 'قبضت (سداد)'],
+                  data: txs.map((t) => [
+                    fmtDate(t.createdAt),
+                    t.note.isEmpty ? '-' : t.note,
+                    t.isGave ? fmt(t.amount) : '-',
+                    !t.isGave ? fmt(t.amount) : '-',
+                  ]).toList(),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    final output = await getTemporaryDirectory();
+    final file = File("${output.path}/statement_${customer.id}.pdf");
+    await file.writeAsBytes(await pdf.save());
+
+    await Share.shareXFiles([XFile(file.path)], text: 'كشف حساب الزبون: ${customer.name}');
+  }
+}
