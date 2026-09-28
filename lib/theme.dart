@@ -10,6 +10,9 @@ String fmt(num v) => _money.format(v);
 String fmtDate(int ms) =>
     DateFormat('dd/MM/yyyy', 'en').format(DateTime.fromMillisecondsSinceEpoch(ms));
 
+/// يتحكم في الوضع الليلي/النهاري لكامل التطبيق
+final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.light);
+
 ThemeData buildTheme() => ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(seedColor: kGreen),
@@ -22,6 +25,26 @@ ThemeData buildTheme() => ThemeData(
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+
+ThemeData buildDarkTheme() => ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.fromSeed(seedColor: kGreen, brightness: Brightness.dark),
+      scaffoldBackgroundColor: const Color(0xFF121212),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF1B3A2B),
+        foregroundColor: Colors.white,
+        centerTitle: true,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF1E1E1E),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
