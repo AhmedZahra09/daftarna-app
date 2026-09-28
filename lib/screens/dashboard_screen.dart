@@ -4,6 +4,8 @@ import '../dialogs.dart';
 import '../models.dart';
 import '../theme.dart';
 import 'customer_profile_screen.dart';
+import 'reports_screen.dart';
+import 'settings_screen.dart';
 import 'summary_card.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -19,6 +21,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _owedToMe = 0;
   int _iOwe = 0;
   String _searchQuery = '';
+  String _sortBy = 'recent';
 
   @override
   void initState() {
@@ -32,8 +35,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() {
       _owedToMe = totals.$1;
       _iOwe = totals.$2;
-      _customers = list;
+      _customers = _applySort(list);
     });
+  }
+
+  List<Customer> _applySort(List<Customer> list) {
+    final sorted = [...list];
+    switch (_sortBy) {
+      case 'name':
+        sorted.sort((a, b) => a.name.compareTo(b.name));
+        break;
+      case 'balance':
+        sorted.sort((a, b) => b.balance.abs().compareTo(a.balance.abs()));
+        break;
+      default:
+        break;
+    }
+    return sorted;
   }
 
   @override
@@ -42,6 +60,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('سكولي'),
         actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.sort),
+            tooltip: 'ترتيب',
+            onSelected: (v) => setState(() {
+              _sortBy = v;
+              _customers = _applySort(_customers);
+            }),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'recent', child: Text('الأحدث')),
+              PopupMenuItem(value: 'name', child: Text('الاسم (أبجديًا)')),
+              PopupMenuItem(value: 'balance', child: Text('الأكثر رصيدًا')),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.mic_rounded),
             onPressed: () async {
@@ -50,6 +81,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
           ),
         ],
+      ),
+      drawer: Drawer(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: Text('سكولي',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: kGreen)),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.bar_chart_rounded),
+                title: const Text('التقارير'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen()));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: const Text('الإعدادات'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+                },
+              ),
+            ],
+          ),
+        ),
       ),
       body: Column(
         children: [
