@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../database.dart';
 import '../dialogs.dart';
@@ -35,6 +36,76 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     });
   }
 
+  Future<void> _editCustomer(Customer c) async {
+    final nameCtrl = TextEditingController(text: c.name);
+    final phoneCtrl = TextEditingController(text: c.phone ?? '');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('تعديل بيانات الزبون'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'الاسم')),
+          const SizedBox(height: 10),
+          TextField(
+            controller: phoneCtrl,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'رقم الهاتف'),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حفظ')),
+        ],
+      ),
+    );
+    if (ok == true && nameCtrl.text.trim().isNotEmpty) {
+      await _db.updateCustomer(c.id, name: nameCtrl.text, phone: phoneCtrl.text);
+      _load();
+    }
+  }
+
+  Future<void> _deleteCustomer(Customer c) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('حذف الزبون'),
+        content: Text('هل أنت متأكد من حذف "${c.name}"؟ سيتم حذف كل معاملاته أيضًا ولا يمكن التراجع.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: kRed),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      await _db.deleteCustomer(c.id);
+      if (mounted) Navigator.pop(context);
+    }
+  }
+
+  Future<void> _sendWhatsAppReminder(Customer c) async {
+    if (c.phone == null || c.phone!.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لا يوجد رقم هاتف مسجل لهذا الزبون')),
+      );
+      return;
+    }
+    final phone = c.phone!.replaceAll(RegExp(r'[^0-9]'), '');
+    final message = Uri.encodeComponent(
+      'تذكير من سكولي: المبلغ المستحق عليك حاليًا هو ${fmt(c.balance.abs())} د.س. نرجو السداد في أقرب وقت، شكرًا لك.',
+    );
+    final url = Uri.parse('https://wa.me/$phone?text=$message');
+    final ok = await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر فتح واتساب، تأكد من رقم الهاتف')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = _c;
@@ -53,10 +124,19 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             onSelected: (v) {
               if (v == 'pdf') {
                 StatementService.sharePdfStatement(c, _txs);
+              } else if (v == 'whatsapp') {
+                _sendWhatsAppReminder(c);
+              } else if (v == 'edit') {
+                _editCustomer(c);
+              } else if (v == 'delete') {
+                _deleteCustomer(c);
               }
             },
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'pdf', child: Text('مشاركة كشف PDF')),
+              PopupMenuItem(value: 'whatsapp', child: Text('تذكير عبر واتساب')),
+              PopupMenuItem(value: 'edit', child: Text('تعديل البيانات')),
+              PopupMenuItem(value: 'delete', child: Text('حذف الزبون')),
             ],
           ),
         ],
@@ -66,7 +146,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
-            color: Colors.white,
             child: Column(
               children: [
                 Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
@@ -118,7 +197,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
           ),
           Container(
             padding: const EdgeInsets.all(16),
-            color: Colors.white,
             child: Row(
               children: [
                 Expanded(
