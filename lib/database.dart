@@ -169,6 +169,20 @@ class AppDatabase {
       await txn.rawUpdate(
         'UPDATE customers SET current_balance = current_balance + ?, sync_status = 0 WHERE id = ?',
         [delta, t.customerId],
+        Future<void> updateCustomer(String id, {String? name, String? phone}) async {
+    final db = await database;
+    final data = <String, Object?>{};
+    if (name != null && name.trim().isNotEmpty) data['name'] = name.trim();
+    final p = phone?.trim();
+    if (phone != null) data['phone'] = (p == null || p.isEmpty) ? null : p;
+    if (data.isEmpty) return;
+    await db.update('customers', data, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteCustomer(String id) async {
+    final db = await database;
+    await db.delete('customers', where: 'id = ?', whereArgs: [id]);
+  }
       );
     });
   }
